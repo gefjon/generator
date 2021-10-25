@@ -76,12 +76,31 @@ If GENERATOR signals `generator-done', return a primary value of NIL, and END-VA
          (handler-case (,for ,var next (generator-next ,gen))
            (generator-done () (finish)))))))
 
-(defmacro do-generator ((var generator &optional (result '(values))) &body body)
-  "Analogous to `dotimes'. Evaluate BODY for the primary value of each element VAR in GENERATOR, then return RESULT."
-  `(iter
-     (for ,var in-generator ,generator)
-     (finally (return ,result))
-     ,@body))
+(declaim (ftype (function (function generator &optional function) (values &rest t))
+                call-with-generator-elements)
+         (inline call-with-generator-elements))
+(defun call-with-generator-elements (thunk generator &optional (end-thunk (constantly nil)))
+  "Invoke THUNK on each element of GENERATOR as by `multiple-value-call'.
+
+THUNK should accept as many elements as are produced by GENERATOR.
+
+If END-THUNK is provided, call it with no arguments last and return its values."
+  (handler-case (iter (multiple-value-call thunk (generator-next generator)))
+    (generator-done () (funcall end-thunk))))
+
+(defmacro do-generator ((vars generator &optional result) &body body)
+  "Analogous to `dotimes'. Evaluate BODY for the  element VARS in GENERATOR, then return RESULT.
+
+VARS should be either a lambda list or a symbol. Bare symbols will be bound to the primary value of each
+element; lambda lists will be applied to all the values of each element."
+  (let* ((thunk (etypecase vars
+                  (list `(lambda ,vars
+                           ,@body))
+                  (symbol (with-gensyms (ignore)
+                            `(lambda (,vars &rest ,ignore)
+                               (declare (ignore ,ignore))
+                               ,@body))))))
+    `(call-with-generator-elements ,thunk ,generator (lambda () ,result))))
 
 ;;; simple constructors
 
@@ -154,7 +173,8 @@ subtracted rather than added."
 ;;; combinators
 
 (declaim (ftype (function (&rest generator) (values generator &optional))
-                generator-conc))
+                generator-conc)
+         (inline generator-conc))
 (defun generator-conc (&rest generators)
   "Yield all the elements of each of the GENERATORS in order from left to right."
   (let* ((remaining generators))
@@ -165,7 +185,8 @@ subtracted rather than added."
       #'concatenated)))
 
 (declaim (ftype (function (generator) (values (generator array-index &rest t) &optional))
-                enumerate))
+                enumerate)
+         (inline enumerate))
 (defun enumerate (generator)
   (generator ((i -1))
     (declare (type (or array-index (eql -1)) i))
@@ -174,7 +195,8 @@ subtracted rather than added."
       (apply #'values (incf i) vals))))
 
 (declaim (ftype (function (generator generator) (values generator &optional))
-                zip))
+                zip)
+         (inline zip))
 (defun zip (left right)
   "Combine two generators into a new generator which yields as multiple values all the values from LEFT followed by all the values from RIGHT."
   (generator ()
