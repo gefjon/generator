@@ -20,9 +20,16 @@
    #:generator-conc))
 (in-package :generator/package)
 
-(deftype generator (&optional (output-type t))
-  "A generator is a closure which takes no arguments and returns successive elements on each invocation, signaling `generator-done' when no elements remain."
-  `(function () (values ,output-type &optional)))
+(deftype generator (&rest values)
+  "A generator is a closure which takes no arguments and returns successive elements on each invocation, signaling `generator-done' when no elements remain.
+
+Most generators yield one value at a time, and many operators treat them as such, but in the general case
+generators may yield arbitrarily many values.
+
+For the sake of terminology, we will say that on each invocation, a generator produces one /element/ which may
+be one or more /values/."
+  (let ((values (or values '(&rest t))))
+    `(function () (values ,@values))))
 
 (define-condition generator-done ()
   ())
@@ -42,21 +49,24 @@ VARS are treated as in `let*'."
               ,@body))
        #'generator-closure)))
 
-(declaim (ftype (function (generator) (values t &optional))
-                generator-next))
+(declaim (ftype (function (generator) (values &rest t))
+                generator-next)
+         (inline generator-next))
 (defun generator-next (generator)
   "Advance GENERATOR, returning its next element, or signaling `generator-done' if none remain."
   (funcall generator))
 
-(declaim (ftype (function (generator &optional t) (values t boolean &optional))
-                generator-try-next))
-(defun generator-try-next (generator &optional end-value)
-  "Advance GENERATOR, returning its next element, or return END-VALUE if none remain.
+(declaim (ftype (function (generator &rest t) (values boolean &rest t))
+                generator-try-next)
+         (inline generator-try-next))
+(defun generator-try-next (generator &rest end-values)
+  "Advance GENERATOR, returning a boolean STILL-RUNNING-P and its values.
 
-Return T as a secondary value if an element from GENERATOR was returned, or NIL if END-VALUE was returned
-because GENERATOR signaled `generator-done'."
-  (handler-case (values (generator-next generator) t)
-    (generator-done () (values end-value nil))))
+If GENERATOR yields values, return a primary value of T, and the generated values.
+
+If GENERATOR signals `generator-done', return a primary value of NIL, and END-VALUES."
+  (handler-case (values t (generator-next generator))
+    (generator-done () (apply #'values nil end-values))))
 
 (defmacro-driver (for var in-generator generator)
   (let ((for (if generate 'generate 'for)))
@@ -67,7 +77,7 @@ because GENERATOR signaled `generator-done'."
            (generator-done () (finish)))))))
 
 (defmacro do-generator ((var generator &optional (result '(values))) &body body)
-  "Analogous to `dotimes'. Evaluate BODY for each element VAR in GENERATOR, then return RESULT."
+  "Analogous to `dotimes'. Evaluate BODY for the primary value of each element VAR in GENERATOR, then return RESULT."
   `(iter
      (for ,var in-generator ,generator)
      (finally (return ,result))
@@ -75,7 +85,7 @@ because GENERATOR signaled `generator-done'."
 
 ;;; simple constructors
 
-(declaim (ftype (function (list) (values generator &optional))
+(declaim (ftype (function (list) (values (generator t &optional) &optional))
                 generate-list)
          (inline generate-list))
 (defun generate-list (list)
@@ -84,7 +94,7 @@ because GENERATOR signaled `generator-done'."
     (if next (pop next)
         (generator-done))))
 
-(declaim (ftype (function (vector) (values generator &optional))
+(declaim (ftype (function (vector) (values (generator t &optional) &optional))
                 generate-vector)
          (inline generate-vector))
 (defun generate-vector (vec)
@@ -109,7 +119,7 @@ new elements, or do other weird stuff."
         (generator-done))))
 
 (declaim (ftype (function (&key (:start real) (:end real) (:step (real (0))))
-                          (values (generator real) &optional))
+                          (values (generator real &optional) &optional))
                 generate-range)
          (inline generate-range))
 (defun generate-range (&key (start 0) (end 0) (step 1))
@@ -153,3 +163,19 @@ subtracted rather than added."
                                (generator-done () (pop remaining) (concatenated)))
                    (generator-done))))
       #'concatenated)))
+
+(declaim (ftype (function (generator) (values (generator array-index &rest t) &optional))
+                enumerate))
+(defun enumerate (generator)
+  (generator ((i -1))
+    (declare (type (or array-index (eql -1)) i))
+    ;; this odd ordering to avoid incrementing i if GENERATOR has finished
+    (let ((vals (multiple-value-list (generator-next generator))))
+      (apply #'values (incf i) vals))))
+
+(declaim (ftype (function (generator generator) (values generator &optional))
+                zip))
+(defun zip (left right)
+  "Combine two generators into a new generator which yields as multiple values all the values from LEFT followed by all the values from RIGHT."
+  (generator ()
+    (multiple-value-call #'values (generator-next left) (generator-next right))))
