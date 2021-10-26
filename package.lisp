@@ -17,7 +17,7 @@
    #:make-generator
 
    ;; combinators
-   #:generator-conc))
+   #:generator-conc #:enumerate #:zip #:take))
 (in-package :generator/package)
 
 (deftype generator (&rest values)
@@ -208,3 +208,14 @@ subtracted rather than added."
   "Combine two generators into a new generator which yields as multiple values all the values from LEFT followed by all the values from RIGHT."
   (generator ()
     (multiple-value-call #'values (generator-next left) (generator-next right))))
+
+(declaim (ftype (function (generator array-index) (values generator &optional))
+                take)
+         (inline take))
+(defun take (generator n)
+  (generator ((remaining n))
+    (declare (type array-index remaining))
+    (if (plusp remaining)
+        (prog1 (generator-next generator)
+          (decf remaining))
+        (generator-done))))
