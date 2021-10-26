@@ -1,0 +1,27 @@
+#+title: GENERATOR: an iteration library for Common Lisp
+#+author: Phoebe Goldman
+
+GENERATOR is a Common Lisp library inspired by Python's, and to a lesser extent Rust's,
+Iterator interfaces.
+
+* FAQ
+or rather, Questions I Thought Of
+
+** Why not name it "ITERATOR", if it's inspired by Python's Iterator?
+That's a name conflict with [[https://common-lisp.net/project/iterate/][ITERATE]], a popular library which I use frequently.
+
+** What is a generator?
+A ~generator~ is an opaque object which represents an ordered sequence of
+values. Generators support a single primitive operation, ~generator-next~, which grabs the
+next element of a generator. Calling ~generator-next~ on a generator which has no more
+elements will signal a condition. This library provides several operators for consuming
+generators which handle that condition appropriately.
+
+** How are generators represented internally?
+Don't depend on this, but a generator is just a function of zero arguments.
+
+** Why is this README so short and uninformative?
+Because this library is very new, and frankly not ready for the big times.
+
+** Why don't you have any tests?
+Because I'm a bad software developer.
