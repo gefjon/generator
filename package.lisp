@@ -11,7 +11,7 @@
    #:generator-next #:generator-try-next #:do-generator
 
    ;; simple constructors
-   #:generate-list #:generate-vector #:generate-range
+   #:generate-list #:generate-vector #:generate-range #:always
 
    ;; generic constructors
    #:make-generator
@@ -154,6 +154,13 @@ subtracted rather than added."
               (actual-step (if (>= end start) step (- step))))
     (if (funcall compare curr end) (prog1 curr (incf curr actual-step))
         (generator-done))))
+
+(declaim (ftype (function (&rest t) (values (generator &rest t) &optional))
+                always))
+(defun always (&rest values)
+  "A generator which always returns VALUES, and never signals `generator-done'"
+  (generator ()
+    (values-list values)))
 
 ;;; generic constructor
 
