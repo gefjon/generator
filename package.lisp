@@ -11,7 +11,7 @@
    #:generator-next #:generator-try-next #:do-generator
 
    ;; simple constructors
-   #:generate-list #:generate-vector #:generate-range #:always
+   #:generate-list #:generate-these #:generate-vector #:generate-range #:always
 
    ;; generic constructors
    #:make-generator
@@ -112,6 +112,12 @@ element; lambda lists will be applied to all the values of each element."
   (generator ((next list))
     (if next (pop next)
         (generator-done))))
+
+(declaim (ftype (function (&rest t) (values (generator t &optional) &optional))
+                generate-these)
+         (inline generate-these))
+(defun generate-these (&rest elts)
+  (generate-list elts))
 
 (declaim (ftype (function (vector) (values (generator t &optional) &optional))
                 generate-vector)
