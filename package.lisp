@@ -2,7 +2,7 @@
   (:nicknames :generator)
   (:use :cl :iterate)
   (:import-from :alexandria
-                #:array-index #:with-gensyms)
+                #:array-index #:with-gensyms #:array-length)
   (:export
    ;; type and general constructor
    #:generator
@@ -17,7 +17,10 @@
    #:make-generator
 
    ;; combinators
-   #:generator-conc #:enumerate #:zip #:take))
+   #:generator-conc #:enumerate #:zip #:take
+
+   ;; collection
+   #:collect-to-list #:collect-to-vector))
 (in-package :generator/package)
 
 (deftype generator (&rest values)
@@ -225,3 +228,27 @@ subtracted rather than added."
         (prog1 (generator-next generator)
           (decf remaining))
         (generator-done))))
+
+;;; collection into strict sequences
+
+(declaim (ftype (function ((generator t &rest t)) (values list &optional))
+                collect-to-list)
+         (inline collect-to-list))
+(defun collect-to-list (generator)
+  (let* ((list nil))
+    (do-generator (elt generator (nreverse list))
+      (push elt list))))
+
+(declaim (ftype (function ((generator t &rest t)
+                           &key (:element-type t)
+                           (:length-hint (or null array-length)))
+                          (values vector &optional))
+                collect-to-vector)
+         (inline collect-to-vector))
+(defun collect-to-vector (generator &key (element-type t) length-hint)
+  (let* ((vec (make-array (or length-hint 0)
+                          :fill-pointer 0
+                          :element-type element-type
+                          :adjustable t)))
+    (do-generator (elt generator vec)
+      (vector-push-extend elt vec))))
