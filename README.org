@@ -25,3 +25,20 @@ Because this library is very new, and frankly not ready for the big times.
 
 ** Why don't you have any tests?
 Because I'm a bad software developer.
+
+** Why don't you have any documentation?
+See the previous question.
+
+** I'm an old curmudgeon. Can you justify this library in terms that made sense when I got my degree 60 years ago?
+
+This is an attempt to reinvent [[https://www.cliki.net/Series][Series]], a Common Lisp lazy streams library which existed
+long before I was born. Series is a fascinating and powerful package, but it's also
+somewhat arcane and unnreadable. A lot of that is due to the fact that (as far as I can
+tell) Series predates optimizing Common Lisp compilers, so it uses a bunch of horrible
+macros to do what I can do with simple ~inline~ declarations on functions.
+
+** Is this library as efficient as Series?
+
+That's a great question! Someone should do some experiments using ~time~ or ~sb-sprof~ to
+compare the two libraries.
+
