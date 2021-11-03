@@ -8,6 +8,8 @@
    #:make-generator))
 (in-package :generator/produce)
 
+(declaim (optimize (speed 3) (safety 1) (space 1) (debug 1)))
+
 (declaim (ftype (function (list) (values (generator t &optional) &optional))
                 generate-list)
          (inline generate-list))

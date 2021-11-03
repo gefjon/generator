@@ -3,10 +3,12 @@
   (:import-from :alexandria
                 #:array-index)
   (:shadow
-   #:concatenate #:map #:substitute #:substitute-if)
+   #:concatenate #:map #:substitute #:substitute-if #:remove #:remove-if #:remove-duplicates)
   (:export
    #:concatenate #:map #:substitute #:substitute-if #:enumerate #:zip #:take))
 (in-package :generator/combine)
+
+(declaim (optimize (speed 3) (safety 1) (space 1) (debug 1)))
 
 (declaim (ftype (function (&rest generator) (values generator &optional))
                 concatenate)
@@ -84,4 +86,24 @@
           (decf remaining))
         (done))))
 
+(declaim (ftype (function ((function (&rest t) (values t &rest t)) generator)
+                          (values generator &optional))
+                remove-if)
+         (inline remove-if))
+(defun remove-if (predicate generator)
+  (labels ((removed-generator ()
+             (let* ((vals (multiple-value-list (next generator))))
+               (if (apply predicate vals)
+                   (removed-generator)
+                   (values-list vals)))))
+    #'removed-generator))
 
+(declaim (ftype (function ((generator t &optional) &key (:test (or symbol function)))
+                          (values (generator t &optional) &optional))
+                remove-duplicates))
+(defun remove-duplicates (generator &key (test #'eql))
+  (let* ((ht (make-hash-table :test test)))
+    (flet ((alreadyp (elt &aux (presentp (nth-value 1 (gethash elt ht))))
+             (setf (gethash elt ht) t)
+             presentp))
+      (remove-if #'alreadyp generator))))

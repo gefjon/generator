@@ -2,13 +2,18 @@
   (:use :cl :generator/defs)
   (:import-from :alexandria
                 #:with-gensyms #:array-length)
+  (:shadow #:length #:count #:count-if)
   (:export
 
    #:try-next
    #:call-with-generator-elements #:do-generator
 
-   #:collect-to-list #:collect-to-vector))
+   #:collect-to-list #:collect-to-vector
+
+   #:skip #:length #:count #:count-if))
 (in-package :generator/consume)
+
+(declaim (optimize (speed 3) (safety 1) (space 1) (debug 1)))
 
 (declaim (ftype (function (generator &rest t) (values boolean &rest t))
                 try-next)
@@ -72,3 +77,43 @@ element; lambda lists will be applied to all the values of each element."
     (do-generator (elt generator vec)
       (vector-push-extend elt vec))))
 
+
+(declaim (ftype (function (generator array-length) (values &rest t))
+                skip))
+(defun skip (generator n)
+  "Consume N elements from GENERATOR, returning the Nth element.
+
+(skip GEN 0) is equivalent to (next gen)"
+  (if (zerop n)
+      (next generator)
+      (progn (next generator)
+             (skip generator (1- n)))))
+
+(declaim (ftype (function (generator) (values array-length &optional))
+                length))
+(defun length (generator &aux (i 0))
+  (declare (type array-length i))
+  (do-generator (elt generator i)
+    (declare (ignore elt))
+    (incf i)))
+
+(declaim (ftype (function ((function (&rest t) (values t &rest t))
+                           generator)
+                          (values array-length &optional))
+                count-if)
+         (inline count-if))
+(defun count-if (predicate generator &aux (count 0))
+  (declare (type array-length count))
+  (do-generator ((&rest elt) generator count)
+    (when (funcall predicate elt)
+      (incf count))))
+
+(declaim (ftype (function (t generator
+                             &key (:test (function (t t) (values t &rest t))))
+                          (values array-length &optional))
+                count))
+(defun count (item generator &key (test #'eql))
+  (flet ((same-as-item-p (value)
+           (funcall test item value)))
+    (declare (dynamic-extent #'same-as-item-p))
+    (count-if #'same-as-item-p generator)))

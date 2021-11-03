@@ -8,7 +8,7 @@
 (in-package :generator/defs)
 
 (deftype generator (&rest values)
-  "A generator is a closure which takes no arguments and returns successive elements on each invocation, signaling `generator-done' when no elements remain.
+  "A generator is a closure which takes no arguments and returns successive elements on each invocation, signaling `done' when no elements remain.
 
 Most generators yield one value at a time, and many operators treat them as such, but in the general case
 generators may yield arbitrarily many values.
@@ -25,7 +25,7 @@ be one or more /values/."
          (inline done))
 (defun done ()
   "Signal that a generator has finished"
-  (error 'generator-done))
+  (error 'done))
 
 (defmacro generator (vars &body body)
   "Construct a generator which closes over VARS and evaluates BODY on each invocation.
@@ -39,5 +39,5 @@ VARS are treated as in `let*'."
 (declaim (ftype (function (generator) (values &rest t)) next)
          (inline next))
 (defun next (generator)
-  "Advance GENERATOR, returning its next element, or signaling `generator-done' if none remain."
+  "Advance GENERATOR, returning its next element, or signaling `done' if none remain."
   (funcall generator))
