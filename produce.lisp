@@ -1,14 +1,20 @@
 (uiop:define-package :generator/produce
   (:use :cl :generator/defs)
   (:import-from :alexandria
-                #:array-index)
+                #:array-index #:define-constant)
   (:export
+   #:+empty-generator+
    #:generate-list #:generate-these #:generate-vector #:generate-range #:always
 
    #:make-generator))
 (in-package :generator/produce)
 
 (declaim (optimize (speed 3) (safety 1) (space 1) (debug 1)))
+
+(declaim (type (generator &rest t) +empty-generator+))
+(define-constant +empty-generator+ (generator () (done))
+  :test (constantly t) ;; no useful way to compare generators, so just don't incompatibly redefine this lmao
+  )
 
 (declaim (ftype (function (list) (values (generator t &optional) &optional))
                 generate-list)
