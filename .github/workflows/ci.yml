@@ -9,7 +9,7 @@ on:
   pull_request:
     branches: [ master ]
   # manually
-  repository_dispatch
+  repository_dispatch:
 
 jobs:
   test:
