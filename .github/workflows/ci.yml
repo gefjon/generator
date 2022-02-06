@@ -1,0 +1,62 @@
+# basically copied from http://3bb.cc/blog/2020/09/11/github-ci/
+
+name: CI
+
+on:
+  # pushes to any branch
+  push:
+  # prs to master
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    # i don't care enough to test on multiple platforms or multiple impls
+    runs-on: ubuntu-latest
+    steps:
+      - name: install sbcl
+        shell: bash
+        # apt sbcl version is recent-ish
+        run: sudo apt-get install -y sbcl
+      - name: fetch asdf
+        shell: bash
+        run: |
+          curl -L https://common-lisp.net/project/asdf/archives/asdf.lisp > ~/asdf.lisp
+      - name: install quicklisp
+        shell: bash
+        run: |
+          curl -L https://beta.quicklisp.org/quicklisp.lisp > ~/install-quicklisp.lisp
+          sbcl --disable-debugger \
+               --load ~/asdf.lisp \
+               --load ~/install-quicklisp.lisp \
+               --eval '(quicklisp-quickstart:install)' \
+               --quit
+      - uses: actions/checkout@v2
+      # load system, load tests, and run tests separately, so i can tell which of those failed
+      - name: load system
+        shell: bash
+        run: |
+          sbcl --disable-debugger \
+               --load ~/asdf.lisp \
+               --load ~/quicklisp/setup.lisp \
+               --eval "(asdf:initialize-source-registry '(:source-registry (:directory \"${{ github.workspace }}/\") :inherit-configuration))" \
+               --eval '(ql:quickload "generator")' \
+               --quit
+      - name: load tests
+        shell: bash
+        run: |
+          sbcl --disable-debugger \
+               --load ~/asdf.lisp \
+               --load ~/quicklisp/setup.lisp \
+               --eval "(asdf:initialize-source-registry '(:source-registry (:directory \"${{ github.workspace }}/\") :inherit-configuration))" \
+               --eval '(ql:quickload "generator/test")' \
+               --quit
+      - name: test
+        shell: bash
+        run: |
+          sbcl --disable-debugger \
+               --load ~/asdf.lisp \
+               --load ~/quicklisp/setup.lisp \
+               --eval "(asdf:initialize-source-registry '(:source-registry (:directory \"${{ github.workspace }}/\") :inherit-configuration))" \
+               --eval '(asdf:test-system "generator")' \
+               --quit
