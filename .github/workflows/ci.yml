@@ -14,6 +14,6 @@ jobs:
     # i don't care enough to test on multiple platforms or multiple impls
     runs-on: ubuntu-latest
     steps:
-      - uses: gefjon/github-action-lisp-ci
+      - uses: gefjon/github-action-lisp-ci@v1
         with:
           system-name: 'generator'
