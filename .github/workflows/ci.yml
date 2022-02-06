@@ -17,3 +17,4 @@ jobs:
       - uses: gefjon/github-action-lisp-ci@v1
         with:
           system-name: 'generator'
+          test-system-name: 'generator/test'
