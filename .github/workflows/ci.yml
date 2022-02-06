@@ -8,6 +8,8 @@ on:
   # prs to master
   pull_request:
     branches: [ master ]
+  # manually
+  repository_dispatch
 
 jobs:
   test:
