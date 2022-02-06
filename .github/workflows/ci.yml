@@ -1,5 +1,3 @@
-# basically copied from http://3bb.cc/blog/2020/09/11/github-ci/
-
 name: CI
 
 on:
