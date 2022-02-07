@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: [ master ]
   # manually
-  repository_dispatch:
+  workflow_dispatch:
 
 jobs:
   test:
